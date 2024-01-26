@@ -27,7 +27,6 @@ module ALU32Bit #(parameter BITS_SIZE = 32)(ALUControl, A, B, ALUResult, Zero);
 	input   [3:0]   ALUControl; // bits de controle para ALU
 	input   [BITS_SIZE - 1:0]  A, B;	    // inputs
 
-	integer temp,i,x;
 	reg [BITS_SIZE - 1:0] y;
 	reg sign;
 	

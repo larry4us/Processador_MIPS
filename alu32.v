@@ -1,55 +1,38 @@
 `timescale 1ns / 1ps
-`define BITSIZE 32 // parametro: numero de bits do processador
-`define ALU_BITSIZE 4
 
 ////////////////////////////////////////////////////////////////////////////////
-// ECE369 - Computer Architecture
-// Laboratory 3 (PreLab)
-// Module - ALU32Bit.v
-// Description - 32-Bit wide arithmetic logic unit (ALU).
+// FTL065 - Arquitetura de Sistemas Digitais
+// Laboratório 2
+// Alunos:
+// - Pedro Larry Rodrigues Lopes - 22153167. 
+// - Gabriel Toshiyuki Batista Toyoda - 22153164.
 //
-// INPUTS:-
-// ALUControl: 4-Bit input control bits to select an ALU operation.
-// A: 32-Bit input port A.
-// B: 32-Bit input port B.
+// PARAMETROS --
+// BITS_SIZE: Tamanho dos numeros sobre os quais serão realiadas as operacoes.
 //
-// OUTPUTS:-
-// ALUResult: 32-Bit ALU result output.
-// ZERO: 1-Bit output flag. 
+// ENTRADAS --
+// A: Entrada de 32 bits (parametrizada) para a ALU.
+// B: Entrada de 32 bits (parametrizada) para a ALU.
+// ALUControl: Entrada de seleção de 4 bits para determinar a operação da ALU.
 //
-// FUNCTIONALITY:-
-// Design a 32-Bit ALU behaviorally, so that it supports addition,  subtraction,
-// AND, OR, and set on less than (SLT). The 'ALUResult' will output the 
-// corresponding result of the operation based on the 32-Bit inputs, 'A', and 
-// 'B'. The 'Zero' flag is high when 'ALUResult' is '0'. The 'ALUControl' signal 
-// should determine the function of the ALU based on the table below:-
-// Op   | 'ALUControl' value
-// ==========================
-// ADD  | 0010
-// SUB  | 0110
-// AND  | 0000
-// OR   | 0001
-// SLT  | 0111
+// SAIDAS --
+// ALUResult: Saída de 32 bits (parametrizada) representando o resultado da operação da ALU.
+// Zero: Saída de 1 bit indicando se ALUResult é zero ou não.
 //
-// NOTE:-
-// SLT (i.e., set on less than): ALUResult is '32'h000000001' if A < B.
-// 
+// Baseado no trabalho de Caskman.
 ////////////////////////////////////////////////////////////////////////////////
 
-module ALU32Bit(ALUControl, A, B, ALUResult, Zero);
+module ALU32Bit #(parameter BITS_SIZE = 32)(ALUControl, A, B, ALUResult, Zero);
 
-	parameter BITS_SIZE = `BITSIZE;
-	parameter ALU_SIZE = `ALU_BITSIZE;
-
-	input   [ALU_SIZE - 1:0]   ALUControl; // control bits for ALU operation
+	input   [3:0]   ALUControl; // bits de controle para ALU
 	input   [BITS_SIZE - 1:0]  A, B;	    // inputs
 
 	integer temp,i,x;
 	reg [BITS_SIZE - 1:0] y;
 	reg sign;
 	
-	output  reg [BITS_SIZE - 1:0]  ALUResult;	// answer
-	output  reg     Zero;	    // Zero=1 if ALUResult == 0
+	output  reg [BITS_SIZE - 1:0]  ALUResult;	// resultado
+	output  reg     Zero;	    // Zero=1 se ALUResult == 0
 
     always @(ALUControl,A,B)
     begin
@@ -63,102 +46,15 @@ module ALU32Bit(ALUControl, A, B, ALUResult, Zero);
 			6: // SUB
 				ALUResult <= A + (~B + 1);
 			7: begin // SLT
-				if (A[BITS_SIZE - 1] != B[BITS_SIZE - 1]) begin
-					if (A[BITS_SIZE - 1] > B[BITS_SIZE - 1]) begin
-						ALUResult <= 1;
-					end else begin
-						ALUResult <= 0;
-					end
+				ALUResult <= A < B ? 1:0;
+			end
+			12: // NOR
+				if (A | B == 1) begin
+					ALUResult <= 0;
 				end else begin
-					if (A < B)
-					begin
-						ALUResult <= 1;
-					end
-					else
-					begin
-						ALUResult <= 0;
-					end
+					ALUResult <= 1;
 				end
-			end
-			3: // NOR
-				ALUResult <= ~(A | B);
-			8: begin // unoccupied
-			end
-			9: // MUL
-				ALUResult <= A * B;
-			10: // SLL
-				ALUResult <= A << (B);
-			11: begin // SGT - Set Greater Than
-				if (A[BITS_SIZE - 1] != B[BITS_SIZE - 1]) begin
-					if (A[BITS_SIZE - 1] > B[BITS_SIZE - 1]) begin
-						ALUResult <= 0;
-					end else begin
-						ALUResult <= 1;
-					end
-				end else begin
-					if (A <= B)
-					begin
-						ALUResult <= 0;
-					end
-					else
-					begin
-						ALUResult <= 1;
-					end
-				end
-			end
-			12: begin // CLO/CLZ
-				x = B;
-				temp = BITS_SIZE;
-				for (i = BITS_SIZE - 1; i >= 0; i = i - 1) begin
-						if (A[i] == x) begin
-							temp = BITS_SIZE - 1 - i;
-							i = -2;
-						end
-				end
-				ALUResult <= temp;
-			end
-			13: begin // ROTR & SRL
-				y = A;
-				for (i = B[4:0];i > 0; i = i - 1) begin
-					if (B[5] == 1)
-						y = {y[0],y[BITS_SIZE - 1:1]};
-					else
-						y = {1'b0,y[BITS_SIZE - 1:1]};
-				end
-				ALUResult <= y;
-			end
-			4: // XOR
-				ALUResult <= A^B;
-			14: // SLTU
-				ALUResult <= A < B;
-			5: begin // Sign Extension
-				if (B == 0) begin // Byte	
-					if (A[7]==1)
-					begin
-						ALUResult  <= {24'hffffff , A};
-					end
-					else 
-					begin
-						ALUResult <= A;
-					end					
-				end else if (B == 1) begin // Half word
-					if (A[BITS_SIZE/2 - 1]==1)
-					begin
-						ALUResult <= {16'hffff , A};
-					end
-					else 
-					begin
-						ALUResult <= A;
-					end
-				end					
-			end
-			15: begin // SRA
-				y = A;
-				for (i = B; i > 0; i = i - 1) begin
-					y = {y[BITS_SIZE - 1],y[BITS_SIZE - 1:1]};
-				end
-				ALUResult <= y;
-			end
+			default: ALUResult <= 0;
 		endcase
 	end
 
